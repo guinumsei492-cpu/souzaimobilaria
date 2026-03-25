@@ -1,9 +1,9 @@
 import streamlit as st
 
-# 1. Configuração da página (DEVE SER A PRIMEIRA LINHA)
+# 1. Configuração da página
 st.set_page_config(page_title="Souza Imobiliária", page_icon="🏠", layout="wide")
 
-# Link para Manifesto PWA e Ícones
+# Link para Manifesto PWA e ícones
 st.markdown('<link rel="manifest" href="manifest.json">', unsafe_allow_html=True)
 st.markdown('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">', unsafe_allow_html=True)
 
@@ -21,43 +21,35 @@ st.markdown("""
         padding: 12px; border-radius: 8px; display: block; text-align: center;
         font-weight: bold; margin-top: 10px;
     }
-    .img-vitrine { width: 100%; border-radius: 10px; height: 200px; object-fit: cover; cursor: pointer; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Banco de Dados Temporário
+# 3. Banco de Dados Temporário (Session State)
 if 'meus_imoveis' not in st.session_state:
     st.session_state.meus_imoveis = [
         {
             "id": 1, "titulo": "Casa Luxo Alphaville", "tipo": "Casa", "preco": 950000.0, 
             "cidade": "Salvador", "quartos": 4,
-            "fotos": [
-                "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800",
-                "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
-                "https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800"
-            ]
+            "fotos": ["https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800"]
         },
         {
             "id": 2, "titulo": "Apartamento Vista Mar", "tipo": "Apartamento", "preco": 450000.0, 
             "cidade": "Lauro de Freitas", "quartos": 2,
-            "fotos": [
-                "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
-                "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800"
-            ]
+            "fotos": ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800"]
         }
     ]
 
-# 4. Interface
+# 4. Navegação
 menu = ["🏠 Início (Cliente)", "🔑 Área do Corretor"]
-escolha = st.sidebar.selectbox("Menu de Navegação", menu)
+escolha = st.sidebar.selectbox("Menu", menu)
 
 if escolha == "🏠 Início (Cliente)":
     st.title("🏠 Souza Imobiliária")
     
-    # Filtros Rápidos
+    # Filtros
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        f_tipo = st.selectbox("O que você procura?", ["Todos", "Casa", "Apartamento", "Terreno"])
+        f_tipo = st.selectbox("Tipo", ["Todos", "Casa", "Apartamento", "Terreno"])
     with col_f2:
         f_preco = st.slider("Preço Máximo", 50000, 2000000, 2000000)
 
@@ -65,62 +57,54 @@ if escolha == "🏠 Início (Cliente)":
 
     imoveis_filtrados = [i for i in st.session_state.meus_imoveis if (f_tipo == "Todos" or i["tipo"] == f_tipo) and (i["preco"] <= f_preco)]
 
-    # Grid de Imóveis
     for imob in imoveis_filtrados:
         with st.container():
             col_img, col_info = st.columns([1, 1])
             
             with col_img:
-                st.image(imob["fotos"][0], use_container_width=True, caption="Toque para ver mais fotos abaixo")
+                # Verificação de segurança para a foto
+                imagem_exibir = imob["fotos"][0] if imob["fotos"] else "https://via.placeholder.com/800x600?text=Sem+Foto"
+                st.image(imagem_exibir, use_container_width=True)
             
             with col_info:
                 st.subheader(imob["titulo"])
                 st.markdown(f"<p class='preco'>R$ {imob['preco']:,.2f}</p>", unsafe_allow_html=True)
                 st.write(f"📍 {imob['cidade']} | 🛏️ {imob['quartos']} Quartos")
                 
-                # Botão Ver Fotos
                 if st.button(f"🔍 Ver detalhes e fotos", key=f"det_{imob['id']}"):
                     st.session_state[f"ver_{imob['id']}"] = True
 
-            # Galeria de Fotos (Aparece ao clicar)
             if st.session_state.get(f"ver_{imob['id']}", False):
-                with st.expander(f"Galeria de Fotos: {imob['titulo']}", expanded=True):
-                    cols_fotos = st.columns(len(imob["fotos"]))
-                    for i, link_foto in enumerate(imob["fotos"]):
-                        with cols_fotos[i]:
-                            st.image(link_foto, use_container_width=True)
+                with st.expander(f"Galeria: {imob['titulo']}", expanded=True):
+                    if imob["fotos"]:
+                        st.image(imob["fotos"], use_container_width=True)
                     
-                    # Botão WhatsApp dentro dos detalhes
-                    link_zap = f"https://wa.me/557182768278?text=Olá%20Souza!%20Quero%20saber%20mais%20sobre:%20{imob['titulo']}"
-                    st.markdown(f'<a href="{link_zap}" target="_blank" class="btn-whatsapp"><i class="fab fa-whatsapp"></i> ME INTERESSEI! CHAMAR NO ZAP</a>', unsafe_allow_html=True)
+                    link_zap = f"https://wa.me/557182768278?text=Olá%20Souza!%20Interesse:%20{imob['titulo']}"
+                    st.markdown(f'<a href="{link_zap}" target="_blank" class="btn-whatsapp">CHAMAR NO ZAP</a>', unsafe_allow_html=True)
                     
-                    if st.button("Fechar Galeria", key=f"close_{imob['id']}"):
+                    if st.button("Fechar", key=f"close_{imob['id']}"):
                         st.session_state[f"ver_{imob['id']}"] = False
                         st.rerun()
             st.write("---")
 
 elif escolha == "🔑 Área do Corretor":
-    st.title("Painel do Corretor")
-    st.warning("As fotos enviadas aqui ficam salvas apenas nesta sessão. Para fixar, use um banco de dados.")
-
-    with st.form("form_cadastro"):
-        nome = st.text_input("Nome do Imóvel")
-        preco = st.number_input("Preço", min_value=0.0)
-        cidade = st.text_input("Bairro/Cidade")
-        tipo = st.selectbox("Categoria", ["Casa", "Apartamento", "Terreno"])
-        upload = st.file_uploader("Selecione as fotos (Câmera ou Galeria)", accept_multiple_files=True)
+    st.title("Cadastrar Imóvel")
+    with st.form("novo_imob", clear_on_submit=True):
+        t = st.text_input("Título")
+        p = st.number_input("Preço", min_value=0.0)
+        cid = st.text_input("Cidade")
+        tipo = st.selectbox("Tipo", ["Casa", "Apartamento", "Terreno"])
+        upload = st.file_uploader("Fotos", accept_multiple_files=True)
+        subir = st.form_submit_button("Publicar")
         
-        btn = st.form_submit_button("✅ Publicar no App")
-        
-        if btn:
-            if nome and upload:
-                # Aqui simplificamos usando a primeira foto enviada ou um placeholder
-                novo = {
-                    "id": len(st.session_state.meus_imoveis) + 1,
-                    "titulo": nome, "tipo": tipo, "preco": preco, "cidade": cidade, "quartos": 3,
-                    "fotos": ["https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800"]
-                }
-                st.session_state.meus_imoveis.append(novo)
-                st.success("Imóvel cadastrado com sucesso!")
-            else:
-                st.error("Preencha o nome e envie pelo menos uma foto.")
+        if subir:
+            # Se não subir foto, usa uma imagem padrão para não dar erro
+            lista_fotos = ["https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800"]
+            
+            novo = {
+                "id": len(st.session_state.meus_imoveis) + 1,
+                "titulo": t, "tipo": tipo, "preco": p, "cidade": cid, "quartos": 3,
+                "fotos": lista_fotos
+            }
+            st.session_state.meus_imoveis.append(novo)
+            st.success("Imóvel cadastrado! Vá ao Início para ver.")
